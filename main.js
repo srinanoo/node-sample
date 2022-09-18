@@ -20,8 +20,9 @@ let url = require('url');
 // with MongoDB
 const mongo = require('mongodb').MongoClient;
 const connURL = "mongodb://localhost:27017/";
-http.createServer(function (req, response) {
-    response.writeHead(200, {'Content-Type': 'application/json'});
+http.createServer((req, res) => {
+    res.writeHead(200, {'Content-Type': 'application/json'});
+    let val = url.parse(req.url, true).query;
     
     mongo.connect(connURL, async (err, db) => {
         if(err) throw err;
@@ -35,42 +36,43 @@ http.createServer(function (req, response) {
         let collectionNames = collections.map(c => c.name);
 
         if(!collectionNames.includes("newCollection")) {
-            conn.createCollection("newCollection", (err, res)=> {
+            conn.createCollection("newCollection", (err, res1)=> {
                 if(err) throw err;
                 console.log("Collection is created!");
-                // console.log(res);
+                // console.log(res1);
             });
         }
 
         // // create single document
-        // conn.collection("newCollection").insertOne({name: "NEW", subject: "NEW SUBJECT"}, (err, res) => {
+        // conn.collection("newCollection").insertOne({name: "NEW", subject: "NEW SUBJECT"}, (err, res1) => {
         //     if(err) throw err;
-        //     response.write(JSON.stringify(res, null, 3));
+        //     response.end(JSON.stringify(res1, null, 3));
         // });
         
-        // find one documents
+        // find one documents (OPTION 1 WORKS)
         let qry = url.parse(req.url, true).query;
         let name = qry.name;
         let subject = qry.subject;
         let noSQL = {};
-        if(name!=="") noSQL.name = name;
-        if(subject!="") noSQL.subject = subject;
-
-        console.log(name);
-        console.log(subject);
-        
-        conn.collection("newCollection").find({name: name, subject: subject}).toArray((err, res) => {
+        // noSQL.name = name;
+        // noSQL.subject = subject;
+        if(typeof name === "undefined" || name === null || name == "") {} else noSQL.name = name;
+        if(typeof subject === "undefined" || subject === null || subject == "") {} else noSQL.subject = subject;
+        conn.collection("newCollection").find(noSQL).toArray((err, res1) => {
             if(err) throw err;
-            response.write(JSON.stringify(res, null, 3));
-            response.end();
+            res.end(JSON.stringify(res1, null, 3));
         });
 
-        response.end();
+
+        // (OPTION 2 WORKS)
+        // conn.collection("newCollection").find({$or: [{name: val.name}, {subject: val.subject}]}, { projection: {_id: 0}}).toArray((err, res1) => {
+        //     if (err) throw err;
+        //     console.log(res1);
+        //     res.end(JSON.stringify(res1,null,3));
+        //     // db.close();
+        // });
     });
-
-    response.end();
-
-}).listen(4001);
+}).listen(4002);
 
 //3000 = FE
 //4000 = BE
